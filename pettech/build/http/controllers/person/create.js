@@ -57,7 +57,7 @@ async function create(request, reply) {
   const registerBodySchema = import_zod.z.object({
     cpf: import_zod.z.string(),
     name: import_zod.z.string(),
-    birth: import_zod.z.date(),
+    birth: import_zod.z.coerce.date(),
     email: import_zod.z.string().email()
   });
   const { cpf, name, birth, email } = registerBodySchema.parse(request.body);

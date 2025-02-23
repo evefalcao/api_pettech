@@ -2,7 +2,7 @@ import { Pool, PoolClient } from 'pg'
 import { env } from '@/env'
 
 const CONFIG = {
-  use: env.DATABASE_USER,
+  user: env.DATABASE_USER,
   host: env.DATABASE_HOST,
   database: env.DATABASE_NAME,
   password: env.DATABASE_PASSWORD,
@@ -14,18 +14,18 @@ class Database {
   private client: PoolClient | undefined
 
   constructor() {
-    this.pool = new Pool (CONFIG)
+    this.pool = new Pool(CONFIG)
+
     this.connection()
   }
 
   private async connection() {
     try {
       this.client = await this.pool.connect()
-    }
-    catch (error) {
-      console.error(`Error connecting to database: ${error}`)
+    } catch (error) {
+      console.error(`Error connecting to the database: ${error}`)
 
-      throw new Error(`Error connecting to database: ${error}`)
+      throw new Error(`Error connecting to the database: ${error}`)
     }
   }
 
