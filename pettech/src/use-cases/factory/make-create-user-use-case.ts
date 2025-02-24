@@ -1,4 +1,4 @@
-import { UserRepository } from '@/repositories/user.reposititory'
+import { UserRepository } from '@/repositories/pg/user.reposititory'
 import { CreateUserUseCase } from '../create-user'
 
 export function makeCreateUserUseCase() {
