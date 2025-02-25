@@ -1,7 +1,10 @@
+import { ICategory } from './category.interface'
+
 export interface IProduct {
   id?: string
   name: string
   description: string
   image_url: string
-  prince: number
+  price: number
+  categories?: ICategory[]
 }
