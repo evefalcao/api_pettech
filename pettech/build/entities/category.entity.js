@@ -47,7 +47,7 @@ __decorateClass([
 ], Category.prototype, "name", 2);
 __decorateClass([
   (0, import_typeorm.Column)({
-    name: "created_at",
+    name: "creation_date",
     type: "timestamp without time zone",
     default: () => "CURRENT_TIMESTAMP"
   })

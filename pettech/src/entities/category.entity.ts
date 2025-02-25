@@ -17,7 +17,7 @@ export class Category implements ICategory {
   name: string
 
   @Column({
-    name: 'created_at',
+    name: 'creation_date',
     type: 'timestamp without time zone',
     default: () => 'CURRENT_TIMESTAMP',
   })
