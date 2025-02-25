@@ -25,12 +25,12 @@ var __decorateClass = (decorators, target, key, kind) => {
   return result;
 };
 
-// src/repositories/typeorm/product.repository.ts
-var product_repository_exports = {};
-__export(product_repository_exports, {
-  ProductRepository: () => ProductRepository
+// src/http/controllers/product/delete.ts
+var delete_exports = {};
+__export(delete_exports, {
+  deleteProduct: () => deleteProduct
 });
-module.exports = __toCommonJS(product_repository_exports);
+module.exports = __toCommonJS(delete_exports);
 
 // src/entities/product.entity.ts
 var import_typeorm2 = require("typeorm");
@@ -202,7 +202,36 @@ var ProductRepository = class {
     await this.repository.delete(id);
   }
 };
+
+// src/use-cases/delete-product.ts
+var DeleteProductUseCase = class {
+  constructor(productRepository) {
+    this.productRepository = productRepository;
+  }
+  async handler(id) {
+    return this.productRepository.delete(id);
+  }
+};
+
+// src/use-cases/factory/make-delete-product-use-case.ts
+function makeDeleteProductUseCase() {
+  const productRepository = new ProductRepository();
+  const deleteProductUseCase = new DeleteProductUseCase(productRepository);
+  return deleteProductUseCase;
+}
+
+// src/http/controllers/product/delete.ts
+var import_zod2 = require("zod");
+async function deleteProduct(request, reply) {
+  const registerParamsSchema = import_zod2.z.object({
+    id: import_zod2.z.coerce.string()
+  });
+  const { id } = registerParamsSchema.parse(request.params);
+  const deleteProductUseCase = makeDeleteProductUseCase();
+  await deleteProductUseCase.handler(id);
+  return reply.status(204).send();
+}
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
-  ProductRepository
+  deleteProduct
 });

@@ -25,12 +25,12 @@ var __decorateClass = (decorators, target, key, kind) => {
   return result;
 };
 
-// src/repositories/typeorm/product.repository.ts
-var product_repository_exports = {};
-__export(product_repository_exports, {
-  ProductRepository: () => ProductRepository
+// src/use-cases/factory/make-delete-product-use-case.ts
+var make_delete_product_use_case_exports = {};
+__export(make_delete_product_use_case_exports, {
+  makeDeleteProductUseCase: () => makeDeleteProductUseCase
 });
-module.exports = __toCommonJS(product_repository_exports);
+module.exports = __toCommonJS(make_delete_product_use_case_exports);
 
 // src/entities/product.entity.ts
 var import_typeorm2 = require("typeorm");
@@ -202,7 +202,24 @@ var ProductRepository = class {
     await this.repository.delete(id);
   }
 };
+
+// src/use-cases/delete-product.ts
+var DeleteProductUseCase = class {
+  constructor(productRepository) {
+    this.productRepository = productRepository;
+  }
+  async handler(id) {
+    return this.productRepository.delete(id);
+  }
+};
+
+// src/use-cases/factory/make-delete-product-use-case.ts
+function makeDeleteProductUseCase() {
+  const productRepository = new ProductRepository();
+  const deleteProductUseCase = new DeleteProductUseCase(productRepository);
+  return deleteProductUseCase;
+}
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
-  ProductRepository
+  makeDeleteProductUseCase
 });

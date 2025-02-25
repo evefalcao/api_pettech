@@ -2,7 +2,10 @@ import { makeFindAllProductUseCase } from '@/use-cases/factory/make-find-all-pro
 import { FastifyRequest, FastifyReply } from 'fastify'
 import { z } from 'zod'
 
-export function findAllProducts(request: FastifyRequest, reply: FastifyReply) {
+export async function findAllProducts(
+  request: FastifyRequest,
+  reply: FastifyReply,
+) {
   const registerQuerySchema = z.object({
     page: z.coerce.number().default(1),
     limit: z.coerce.number().default(10),
@@ -12,7 +15,7 @@ export function findAllProducts(request: FastifyRequest, reply: FastifyReply) {
 
   const findAllProductUseCase = makeFindAllProductUseCase()
 
-  const products = findAllProductUseCase.handler(page, limit)
+  const products = await findAllProductUseCase.handler(page, limit)
 
   return reply.status(200).send(products)
 }

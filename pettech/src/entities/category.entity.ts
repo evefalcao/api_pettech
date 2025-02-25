@@ -8,7 +8,7 @@ export class Category implements ICategory {
   @PrimaryGeneratedColumn('increment', {
     name: 'id',
   })
-  id?: number | undefined
+  id?: number
 
   @Column({
     name: 'name',

@@ -25,12 +25,12 @@ var __decorateClass = (decorators, target, key, kind) => {
   return result;
 };
 
-// src/repositories/typeorm/product.repository.ts
-var product_repository_exports = {};
-__export(product_repository_exports, {
-  ProductRepository: () => ProductRepository
+// src/http/controllers/product/update.ts
+var update_exports = {};
+__export(update_exports, {
+  update: () => update
 });
-module.exports = __toCommonJS(product_repository_exports);
+module.exports = __toCommonJS(update_exports);
 
 // src/entities/product.entity.ts
 var import_typeorm2 = require("typeorm");
@@ -202,7 +202,56 @@ var ProductRepository = class {
     await this.repository.delete(id);
   }
 };
+
+// src/use-cases/update-product.ts
+var UpdateProductUseCase = class {
+  constructor(productRepository) {
+    this.productRepository = productRepository;
+  }
+  async handler(product) {
+    return this.productRepository.update(product);
+  }
+};
+
+// src/use-cases/factory/make-update-product-use-case.ts
+function makeUpdateProductUseCase() {
+  const productRepository = new ProductRepository();
+  const updateProductUseCase = new UpdateProductUseCase(productRepository);
+  return updateProductUseCase;
+}
+
+// src/http/controllers/product/update.ts
+var import_zod2 = require("zod");
+async function update(request, reply) {
+  const registerParamsSchema = import_zod2.z.object({
+    id: import_zod2.z.coerce.string()
+  });
+  const { id } = registerParamsSchema.parse(request.params);
+  const registerBodySchema = import_zod2.z.object({
+    name: import_zod2.z.string(),
+    description: import_zod2.z.string(),
+    image: import_zod2.z.string(),
+    price: import_zod2.z.coerce.number(),
+    categories: import_zod2.z.array(
+      import_zod2.z.object({
+        id: import_zod2.z.coerce.number(),
+        name: import_zod2.z.string()
+      })
+    ).optional()
+  });
+  const { name, description, image, price, categories } = registerBodySchema.parse(request.body);
+  const updateProductUseCase = makeUpdateProductUseCase();
+  const product = await updateProductUseCase.handler({
+    id,
+    name,
+    description,
+    image,
+    price,
+    categories: categories || []
+  });
+  return reply.status(200).send(product);
+}
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
-  ProductRepository
+  update
 });

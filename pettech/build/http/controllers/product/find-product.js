@@ -25,12 +25,12 @@ var __decorateClass = (decorators, target, key, kind) => {
   return result;
 };
 
-// src/repositories/typeorm/product.repository.ts
-var product_repository_exports = {};
-__export(product_repository_exports, {
-  ProductRepository: () => ProductRepository
+// src/http/controllers/product/find-product.ts
+var find_product_exports = {};
+__export(find_product_exports, {
+  findProduct: () => findProduct
 });
-module.exports = __toCommonJS(product_repository_exports);
+module.exports = __toCommonJS(find_product_exports);
 
 // src/entities/product.entity.ts
 var import_typeorm2 = require("typeorm");
@@ -202,7 +202,45 @@ var ProductRepository = class {
     await this.repository.delete(id);
   }
 };
+
+// src/use-cases/errors/resource-not-found-error.ts
+var ResourceNotFoundError = class extends Error {
+  constructor() {
+    super("Resource not found");
+  }
+};
+
+// src/use-cases/find-product.ts
+var FindProductUseCase = class {
+  constructor(productRepository) {
+    this.productRepository = productRepository;
+  }
+  async handler(id) {
+    const product = await this.productRepository.findById(id);
+    if (!product) throw new ResourceNotFoundError();
+    return this.productRepository.findById(id);
+  }
+};
+
+// src/use-cases/factory/make-find-product-use-case.ts
+function makeFindProductUseCase() {
+  const productRepository = new ProductRepository();
+  const findProductUseCase = new FindProductUseCase(productRepository);
+  return findProductUseCase;
+}
+
+// src/http/controllers/product/find-product.ts
+var import_zod2 = require("zod");
+async function findProduct(request, reply) {
+  const registerParamsSchema = import_zod2.z.object({
+    id: import_zod2.z.coerce.string()
+  });
+  const { id } = registerParamsSchema.parse(request.params);
+  const findProductUseCase = makeFindProductUseCase();
+  const products = await findProductUseCase.handler(id);
+  return reply.status(200).send(products);
+}
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
-  ProductRepository
+  findProduct
 });

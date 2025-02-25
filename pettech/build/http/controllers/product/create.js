@@ -179,8 +179,27 @@ var ProductRepository = class {
   constructor() {
     this.repository = appDataSource.getRepository(Product);
   }
+  async findAll(page, limit) {
+    return this.repository.find({
+      relations: ["category"],
+      skip: (page - 1) * limit,
+      take: limit
+    });
+  }
+  async findById(id) {
+    return this.repository.findOne({
+      relations: ["category"],
+      where: { id }
+    });
+  }
   async create(product) {
     return this.repository.save(product);
+  }
+  async update(product) {
+    return this.repository.save(product);
+  }
+  async delete(id) {
+    await this.repository.delete(id);
   }
 };
 

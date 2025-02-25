@@ -25,12 +25,12 @@ var __decorateClass = (decorators, target, key, kind) => {
   return result;
 };
 
-// src/repositories/typeorm/product.repository.ts
-var product_repository_exports = {};
-__export(product_repository_exports, {
-  ProductRepository: () => ProductRepository
+// src/http/controllers/product/find-all-products.ts
+var find_all_products_exports = {};
+__export(find_all_products_exports, {
+  findAllProducts: () => findAllProducts
 });
-module.exports = __toCommonJS(product_repository_exports);
+module.exports = __toCommonJS(find_all_products_exports);
 
 // src/entities/product.entity.ts
 var import_typeorm2 = require("typeorm");
@@ -202,7 +202,37 @@ var ProductRepository = class {
     await this.repository.delete(id);
   }
 };
+
+// src/use-cases/find-all-products.ts
+var FindAllProductUseCase = class {
+  constructor(productRepository) {
+    this.productRepository = productRepository;
+  }
+  async handler(page, limit) {
+    return this.productRepository.findAll(page, limit);
+  }
+};
+
+// src/use-cases/factory/make-find-all-product-use-case.ts
+function makeFindAllProductUseCase() {
+  const productRepository = new ProductRepository();
+  const findAllProductUseCase = new FindAllProductUseCase(productRepository);
+  return findAllProductUseCase;
+}
+
+// src/http/controllers/product/find-all-products.ts
+var import_zod2 = require("zod");
+function findAllProducts(request, reply) {
+  const registerQuerySchema = import_zod2.z.object({
+    page: import_zod2.z.coerce.number().default(1),
+    limit: import_zod2.z.coerce.number().default(10)
+  });
+  const { page, limit } = registerQuerySchema.parse(request.query);
+  const findAllProductUseCase = makeFindAllProductUseCase();
+  const products = findAllProductUseCase.handler(page, limit);
+  return reply.status(200).send(products);
+}
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
-  ProductRepository
+  findAllProducts
 });

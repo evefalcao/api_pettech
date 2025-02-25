@@ -1,16 +1,20 @@
-import { FastifyReply, FastifyRequest } from "fastify";
-import { env } from "process";
-import { ZodError } from "zod";
+import { FastifyReply, FastifyRequest } from 'fastify'
+import { env } from 'process'
+import { ZodError } from 'zod'
 
 interface ErrorHandlerMap {
-  [key: string]: (error: Error | ZodError, request: FastifyRequest, reply: FastifyReply) => void
+  [key: string]: (
+    error: Error | ZodError,
+    request: FastifyRequest,
+    reply: FastifyReply,
+  ) => void
 }
 
 export const errorHandlerMap: ErrorHandlerMap = {
   ZodError: (error, _, reply) => {
-    return reply.status(400).send({ 
+    return reply.status(400).send({
       message: 'Validation error',
-      ...(error instanceof ZodError && { error: error.format() })
+      ...(error instanceof ZodError && { error: error.format() }),
     })
   },
   ResourceNotFoundError: (error, _, reply) => {
@@ -18,8 +22,11 @@ export const errorHandlerMap: ErrorHandlerMap = {
   },
 }
 
-export const globalErrorHandler = (error: Error, _: FastifyRequest, reply: FastifyReply) => {
-
+export const globalErrorHandler = (
+  error: Error,
+  _: FastifyRequest,
+  reply: FastifyReply,
+) => {
   if (env.NODE_ENV === 'development') {
     console.error(error)
   }
