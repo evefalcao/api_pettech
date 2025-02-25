@@ -48,7 +48,7 @@ var env = _env.data;
 
 // src/lib/pg/db.ts
 var CONFIG = {
-  use: env.DATABASE_USER,
+  user: env.DATABASE_USER,
   host: env.DATABASE_HOST,
   database: env.DATABASE_NAME,
   password: env.DATABASE_PASSWORD,
@@ -63,8 +63,8 @@ var Database = class {
     try {
       this.client = await this.pool.connect();
     } catch (error) {
-      console.error(`Error connecting to database: ${error}`);
-      throw new Error(`Error connecting to database: ${error}`);
+      console.error(`Error connecting to the database: ${error}`);
+      throw new Error(`Error connecting to the database: ${error}`);
     }
   }
   get clientInstance() {
@@ -73,12 +73,24 @@ var Database = class {
 };
 var database = new Database();
 
-// src/repositories/user.reposititory.ts
+// src/repositories/pg/user.reposititory.ts
 var UserRepository = class {
-  async create({ username, password }) {
+  async create({
+    username,
+    password
+  }) {
     const result = await database.clientInstance?.query(
       `INSERT INTO "user" (username, password) VALUES ($1, $2) RETURNING *`,
       [username, password]
+    );
+    return result?.rows[0];
+  }
+  async findWithPerson(userId) {
+    const result = await database.clientInstance?.query(
+      `SELECT * FROM "user" 
+      LEFT JOIN person ON "user".id = person.user_id
+      WHERE "user".id = $1`,
+      [userId]
     );
     return result?.rows[0];
   }
@@ -94,6 +106,13 @@ var CreateUserUseCase = class {
   }
 };
 
+// src/use-cases/factory/make-create-user-use-case.ts
+function makeCreateUserUseCase() {
+  const userRepository = new UserRepository();
+  const createUserUseCase = new CreateUserUseCase(userRepository);
+  return createUserUseCase;
+}
+
 // src/http/controllers/user/create.ts
 var import_zod2 = require("zod");
 async function create(request, reply) {
@@ -102,15 +121,9 @@ async function create(request, reply) {
     password: import_zod2.z.string()
   });
   const { username, password } = registerBodySchema.parse(request.body);
-  try {
-    const userRepository = new UserRepository();
-    const createUserUseCase = new CreateUserUseCase(userRepository);
-    const user = await createUserUseCase.handler({ username, password });
-    return reply.status(201).send(user);
-  } catch (error) {
-    console.error(`Error creating user: ${error}`);
-    throw new Error(`Error creating user: ${error}`);
-  }
+  const createUserUseCase = makeCreateUserUseCase();
+  const user = await createUserUseCase.handler({ username, password });
+  return reply.status(201).send(user);
 }
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {

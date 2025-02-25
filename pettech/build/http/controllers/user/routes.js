@@ -48,7 +48,7 @@ var env = _env.data;
 
 // src/lib/pg/db.ts
 var CONFIG = {
-  use: env.DATABASE_USER,
+  user: env.DATABASE_USER,
   host: env.DATABASE_HOST,
   database: env.DATABASE_NAME,
   password: env.DATABASE_PASSWORD,
@@ -63,8 +63,8 @@ var Database = class {
     try {
       this.client = await this.pool.connect();
     } catch (error) {
-      console.error(`Error connecting to database: ${error}`);
-      throw new Error(`Error connecting to database: ${error}`);
+      console.error(`Error connecting to the database: ${error}`);
+      throw new Error(`Error connecting to the database: ${error}`);
     }
   }
   get clientInstance() {
@@ -73,12 +73,24 @@ var Database = class {
 };
 var database = new Database();
 
-// src/repositories/user.reposititory.ts
+// src/repositories/pg/user.reposititory.ts
 var UserRepository = class {
-  async create({ username, password }) {
+  async create({
+    username,
+    password
+  }) {
     const result = await database.clientInstance?.query(
       `INSERT INTO "user" (username, password) VALUES ($1, $2) RETURNING *`,
       [username, password]
+    );
+    return result?.rows[0];
+  }
+  async findWithPerson(userId) {
+    const result = await database.clientInstance?.query(
+      `SELECT * FROM "user" 
+      LEFT JOIN person ON "user".id = person.user_id
+      WHERE "user".id = $1`,
+      [userId]
     );
     return result?.rows[0];
   }
@@ -94,6 +106,13 @@ var CreateUserUseCase = class {
   }
 };
 
+// src/use-cases/factory/make-create-user-use-case.ts
+function makeCreateUserUseCase() {
+  const userRepository = new UserRepository();
+  const createUserUseCase = new CreateUserUseCase(userRepository);
+  return createUserUseCase;
+}
+
 // src/http/controllers/user/create.ts
 var import_zod2 = require("zod");
 async function create(request, reply) {
@@ -102,19 +121,52 @@ async function create(request, reply) {
     password: import_zod2.z.string()
   });
   const { username, password } = registerBodySchema.parse(request.body);
-  try {
-    const userRepository = new UserRepository();
-    const createUserUseCase = new CreateUserUseCase(userRepository);
-    const user = await createUserUseCase.handler({ username, password });
-    return reply.status(201).send(user);
-  } catch (error) {
-    console.error(`Error creating user: ${error}`);
-    throw new Error(`Error creating user: ${error}`);
+  const createUserUseCase = makeCreateUserUseCase();
+  const user = await createUserUseCase.handler({ username, password });
+  return reply.status(201).send(user);
+}
+
+// src/use-cases/errors/resource-not-found-error.ts
+var ResourceNotFoundError = class extends Error {
+  constructor() {
+    super("Resource not found");
   }
+};
+
+// src/use-cases/find-with-person.ts
+var FindWithPersonUseCase = class {
+  constructor(userRepository) {
+    this.userRepository = userRepository;
+  }
+  async handler(userId) {
+    const user = await this.userRepository.findWithPerson(userId);
+    if (!user) throw new ResourceNotFoundError();
+    return user;
+  }
+};
+
+// src/use-cases/factory/make-find-with-person-use-case.ts
+function makeFindWithPersonUseCase() {
+  const userRepository = new UserRepository();
+  const findWithPersonUseCase = new FindWithPersonUseCase(userRepository);
+  return findWithPersonUseCase;
+}
+
+// src/http/controllers/user/find-user.ts
+var import_zod3 = require("zod");
+async function findUser(request, reply) {
+  const registerParamsSchema = import_zod3.z.object({
+    id: import_zod3.z.coerce.number()
+  });
+  const { id } = registerParamsSchema.parse(request.params);
+  const findWithPersonUseCase = makeFindWithPersonUseCase();
+  const user = await findWithPersonUseCase.handler(id);
+  return reply.status(200).send(user);
 }
 
 // src/http/controllers/user/routes.ts
 async function userRoutes(app) {
+  app.get("/user/:id", findUser);
   app.post("/user", create);
 }
 // Annotate the CommonJS export names for ESM import in node:

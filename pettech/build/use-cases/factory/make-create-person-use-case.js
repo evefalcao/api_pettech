@@ -17,12 +17,14 @@ var __copyProps = (to, from, except, desc) => {
 };
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
-// src/lib/pg/db.ts
-var db_exports = {};
-__export(db_exports, {
-  database: () => database
+// src/use-cases/factory/make-create-person-use-case.ts
+var make_create_person_use_case_exports = {};
+__export(make_create_person_use_case_exports, {
+  makeCreatePersonUseCase: () => makeCreatePersonUseCase
 });
-module.exports = __toCommonJS(db_exports);
+module.exports = __toCommonJS(make_create_person_use_case_exports);
+
+// src/lib/pg/db.ts
 var import_pg = require("pg");
 
 // src/env/index.ts
@@ -70,7 +72,41 @@ var Database = class {
   }
 };
 var database = new Database();
+
+// src/repositories/pg/person.repository.ts
+var PersonRepository = class {
+  async create({
+    cpf,
+    name,
+    birth,
+    email,
+    user_id
+  }) {
+    const result = await database.clientInstance?.query(
+      "INSERT INTO person (cpf, name, birth, email, user_id) VALUES ($1, $2, $3, $4, $5) RETURNING *",
+      [cpf, name, birth, email, user_id]
+    );
+    return result?.rows[0];
+  }
+};
+
+// src/use-cases/create-person.ts
+var CreatePersonUseCase = class {
+  constructor(personRepository) {
+    this.personRepository = personRepository;
+  }
+  handler(person) {
+    return this.personRepository.create(person);
+  }
+};
+
+// src/use-cases/factory/make-create-person-use-case.ts
+function makeCreatePersonUseCase() {
+  const personRepository = new PersonRepository();
+  const createPersonUseCase = new CreatePersonUseCase(personRepository);
+  return createPersonUseCase;
+}
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
-  database
+  makeCreatePersonUseCase
 });

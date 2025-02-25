@@ -17,12 +17,14 @@ var __copyProps = (to, from, except, desc) => {
 };
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
-// src/lib/pg/db.ts
-var db_exports = {};
-__export(db_exports, {
-  database: () => database
+// src/use-cases/factory/make-create-address-use-case.ts
+var make_create_address_use_case_exports = {};
+__export(make_create_address_use_case_exports, {
+  makeCreateAddressUseCase: () => makeCreateAddressUseCase
 });
-module.exports = __toCommonJS(db_exports);
+module.exports = __toCommonJS(make_create_address_use_case_exports);
+
+// src/lib/pg/db.ts
 var import_pg = require("pg");
 
 // src/env/index.ts
@@ -70,7 +72,60 @@ var Database = class {
   }
 };
 var database = new Database();
+
+// src/repositories/pg/address.repository.ts
+var AddressRepository = class {
+  async findAddressByPersonId(personId, page, limit) {
+    const offset = (page - 1) * limit;
+    const query = `
+      SELECT address.*, person.*
+      FROM address
+      JOIN person ON address.person_id = person.id
+      WHERE person.id = $1
+      LIMIT $2
+      OFFSET $3
+    `;
+    const result = await database.clientInstance?.query(
+      query,
+      [personId, limit, offset]
+    );
+    return result?.rows || [];
+  }
+  async create({
+    street,
+    city,
+    state,
+    zip_code,
+    person_id
+  }) {
+    const result = await database.clientInstance?.query(
+      `
+      INSERT INTO "address" (street, city, state, zip_code, person_id)
+      VALUES ($1, $2, $3, $4, $5)
+      RETURNING *`,
+      [street, city, state, zip_code, person_id]
+    );
+    return result?.rows[0];
+  }
+};
+
+// src/use-cases/create-address.ts
+var CreateAddressUseCase = class {
+  constructor(addressRepository) {
+    this.addressRepository = addressRepository;
+  }
+  async handler(address) {
+    return this.addressRepository.create(address);
+  }
+};
+
+// src/use-cases/factory/make-create-address-use-case.ts
+function makeCreateAddressUseCase() {
+  const addressRepository = new AddressRepository();
+  const createAddressUseCase = new CreateAddressUseCase(addressRepository);
+  return createAddressUseCase;
+}
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
-  database
+  makeCreateAddressUseCase
 });

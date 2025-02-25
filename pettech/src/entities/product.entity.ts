@@ -37,10 +37,10 @@ export class Product implements IProduct {
   image_url: string
 
   @Column({
-    name: 'prince',
+    name: 'price',
     type: 'double precision',
   })
-  prince: number
+  price: number
 
   @ManyToMany(() => Category, {
     cascade: true,
