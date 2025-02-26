@@ -1,5 +1,5 @@
+// import { env } from '@/env'
 import { FastifyReply, FastifyRequest } from 'fastify'
-import { env } from 'process'
 import { ZodError } from 'zod'
 
 interface ErrorHandlerMap {
@@ -20,6 +20,9 @@ export const errorHandlerMap: ErrorHandlerMap = {
   ResourceNotFoundError: (error, _, reply) => {
     return reply.status(404).send({ message: error.message })
   },
+  InvalidCredentialsError: (error, _, reply) => {
+    return reply.status(404).send({ message: error.message })
+  },
 }
 
 export const globalErrorHandler = (
@@ -27,9 +30,9 @@ export const globalErrorHandler = (
   _: FastifyRequest,
   reply: FastifyReply,
 ) => {
-  if (env.NODE_ENV === 'development') {
-    console.error(error)
-  }
+  // if (env.NODE_ENV === 'development') {
+  console.error(error)
+  // }
 
   const handler = errorHandlerMap[error.constructor.name]
 

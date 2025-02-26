@@ -40,7 +40,8 @@ var envSchema = import_zod.z.object({
   DATABASE_HOST: import_zod.z.string(),
   DATABASE_NAME: import_zod.z.string(),
   DATABASE_PASSWORD: import_zod.z.string(),
-  DATABASE_PORT: import_zod.z.coerce.number()
+  DATABASE_PORT: import_zod.z.coerce.number(),
+  JWT_SECRET: import_zod.z.string()
 });
 var _env = envSchema.safeParse(process.env);
 if (!_env.success) {
@@ -111,7 +112,7 @@ __decorateClass([
     name: "image_url",
     type: "varchar"
   })
-], Product.prototype, "image_url", 2);
+], Product.prototype, "image", 2);
 __decorateClass([
   (0, import_typeorm2.Column)({
     name: "price",
@@ -271,6 +272,13 @@ async function personRoutes(app2) {
 
 // src/repositories/pg/user.reposititory.ts
 var UserRepository = class {
+  async findByUsername(username) {
+    const result = await database.clientInstance?.query(
+      `SELECT * FROM "user" WHERE "user".username = $1`,
+      [username]
+    );
+    return result?.rows[0];
+  }
   async create({
     username,
     password
@@ -310,6 +318,7 @@ function makeCreateUserUseCase() {
 }
 
 // src/http/controllers/user/create.ts
+var import_bcryptjs = require("bcryptjs");
 var import_zod3 = require("zod");
 async function create2(request, reply) {
   const registerBodySchema = import_zod3.z.object({
@@ -317,9 +326,11 @@ async function create2(request, reply) {
     password: import_zod3.z.string()
   });
   const { username, password } = registerBodySchema.parse(request.body);
+  const hashedPassword = await (0, import_bcryptjs.hash)(password, 8);
+  const userWithHashedPassword = { username, password: hashedPassword };
   const createUserUseCase = makeCreateUserUseCase();
-  const user = await createUserUseCase.handler({ username, password });
-  return reply.status(201).send(user);
+  const user = await createUserUseCase.handler(userWithHashedPassword);
+  return reply.status(201).send({ id: user?.id, username: user?.username });
 }
 
 // src/use-cases/errors/resource-not-found-error.ts
@@ -360,23 +371,74 @@ async function findUser(request, reply) {
   return reply.status(200).send(user);
 }
 
+// src/use-cases/errors/invalid-credentials-error.ts
+var InvalidCredentailsError = class extends Error {
+  constructor() {
+    super("Username or password is incorrect");
+  }
+};
+
+// src/use-cases/signin.ts
+var SigninUseCase = class {
+  constructor(userRepository) {
+    this.userRepository = userRepository;
+  }
+  async handler(username) {
+    const user = await this.userRepository.findByUsername(username);
+    if (!user) {
+      throw new InvalidCredentailsError();
+    }
+    return user;
+  }
+};
+
+// src/use-cases/factory/make-signin-use-case.ts
+function makeSigninUseCase() {
+  const userRepository = new UserRepository();
+  const signinUseCase = new SigninUseCase(userRepository);
+  return signinUseCase;
+}
+
+// src/http/controllers/user/signin.ts
+var import_bcryptjs2 = require("bcryptjs");
+var import_zod5 = require("zod");
+async function signin(request, reply) {
+  const registerBodySchema = import_zod5.z.object({
+    username: import_zod5.z.string(),
+    password: import_zod5.z.string()
+  });
+  const { username, password } = registerBodySchema.parse(request.body);
+  const signinUseCase = makeSigninUseCase();
+  const user = await signinUseCase.handler(username);
+  const doesntPasswordMatch = await (0, import_bcryptjs2.compare)(password, user.password);
+  if (!doesntPasswordMatch) {
+    throw new InvalidCredentailsError();
+  }
+  const token = await reply.jwtSign({ username });
+  return reply.status(200).send({ token });
+}
+
 // src/http/controllers/user/routes.ts
 async function userRoutes(app2) {
   app2.get("/user/:id", findUser);
   app2.post("/user", create2);
+  app2.post("/user/signin", signin);
 }
 
 // src/utils/global-error-handler.ts
 var import_process = require("process");
-var import_zod5 = require("zod");
+var import_zod6 = require("zod");
 var errorHandlerMap = {
   ZodError: (error, _, reply) => {
     return reply.status(400).send({
       message: "Validation error",
-      ...error instanceof import_zod5.ZodError && { error: error.format() }
+      ...error instanceof import_zod6.ZodError && { error: error.format() }
     });
   },
   ResourceNotFoundError: (error, _, reply) => {
+    return reply.status(404).send({ message: error.message });
+  },
+  InvalidCredentialsError: (error, _, reply) => {
     return reply.status(404).send({ message: error.message });
   }
 };
@@ -443,14 +505,14 @@ function makeCreateAddressUseCase() {
 }
 
 // src/http/controllers/address/create.ts
-var import_zod6 = require("zod");
+var import_zod7 = require("zod");
 async function create3(request, reply) {
-  const registerBodySchema = import_zod6.z.object({
-    street: import_zod6.z.string(),
-    city: import_zod6.z.string(),
-    state: import_zod6.z.string(),
-    zip_code: import_zod6.z.string(),
-    person_id: import_zod6.z.number()
+  const registerBodySchema = import_zod7.z.object({
+    street: import_zod7.z.string(),
+    city: import_zod7.z.string(),
+    state: import_zod7.z.string(),
+    zip_code: import_zod7.z.string(),
+    person_id: import_zod7.z.number()
   });
   const { street, city, state, zip_code, person_id } = registerBodySchema.parse(
     request.body
@@ -486,14 +548,14 @@ function makeFindAddressByPersonUseCase() {
 }
 
 // src/http/controllers/address/find-address.ts
-var import_zod7 = require("zod");
+var import_zod8 = require("zod");
 async function findAddress(request, reply) {
-  const registerParamsSchema = import_zod7.z.object({
-    personId: import_zod7.z.coerce.number()
+  const registerParamsSchema = import_zod8.z.object({
+    personId: import_zod8.z.coerce.number()
   });
-  const registerQuerySchema = import_zod7.z.object({
-    page: import_zod7.z.coerce.number(),
-    limit: import_zod7.z.coerce.number()
+  const registerQuerySchema = import_zod8.z.object({
+    page: import_zod8.z.coerce.number(),
+    limit: import_zod8.z.coerce.number()
   });
   const { personId } = registerParamsSchema.parse(request.params);
   const { page, limit } = registerQuerySchema.parse(request.query);
@@ -519,14 +581,14 @@ var ProductRepository = class {
   }
   async findAll(page, limit) {
     return this.repository.find({
-      relations: ["category"],
+      relations: ["categories"],
       skip: (page - 1) * limit,
       take: limit
     });
   }
   async findById(id) {
     return this.repository.findOne({
-      relations: ["category"],
+      relations: ["categories"],
       where: { id }
     });
   }
@@ -559,26 +621,26 @@ function makeCreateProductUseCase() {
 }
 
 // src/http/controllers/product/create.ts
-var import_zod8 = require("zod");
+var import_zod9 = require("zod");
 async function create4(request, reply) {
-  const registerBodySchema = import_zod8.z.object({
-    name: import_zod8.z.string(),
-    description: import_zod8.z.string(),
-    image_url: import_zod8.z.string(),
-    price: import_zod8.z.coerce.number(),
-    categories: import_zod8.z.array(
-      import_zod8.z.object({
-        id: import_zod8.z.coerce.number(),
-        name: import_zod8.z.string()
+  const registerBodySchema = import_zod9.z.object({
+    name: import_zod9.z.string(),
+    description: import_zod9.z.string(),
+    image: import_zod9.z.string(),
+    price: import_zod9.z.coerce.number(),
+    categories: import_zod9.z.array(
+      import_zod9.z.object({
+        id: import_zod9.z.coerce.number().optional(),
+        name: import_zod9.z.string()
       })
     ).optional()
   });
-  const { name, description, image_url, price, categories } = registerBodySchema.parse(request.body);
+  const { name, description, image, price, categories } = registerBodySchema.parse(request.body);
   const createProductUseCase = makeCreateProductUseCase();
   const product = await createProductUseCase.handler({
     name,
     description,
-    image_url,
+    image,
     price,
     categories
   });
@@ -603,15 +665,15 @@ function makeFindAllProductUseCase() {
 }
 
 // src/http/controllers/product/find-all-products.ts
-var import_zod9 = require("zod");
-function findAllProducts(request, reply) {
-  const registerQuerySchema = import_zod9.z.object({
-    page: import_zod9.z.coerce.number().default(1),
-    limit: import_zod9.z.coerce.number().default(10)
+var import_zod10 = require("zod");
+async function findAllProducts(request, reply) {
+  const registerQuerySchema = import_zod10.z.object({
+    page: import_zod10.z.coerce.number().default(1),
+    limit: import_zod10.z.coerce.number().default(10)
   });
   const { page, limit } = registerQuerySchema.parse(request.query);
   const findAllProductUseCase = makeFindAllProductUseCase();
-  const products = findAllProductUseCase.handler(page, limit);
+  const products = await findAllProductUseCase.handler(page, limit);
   return reply.status(200).send(products);
 }
 
@@ -635,10 +697,10 @@ function makeFindProductUseCase() {
 }
 
 // src/http/controllers/product/find-product.ts
-var import_zod10 = require("zod");
+var import_zod11 = require("zod");
 async function findProduct(request, reply) {
-  const registerParamsSchema = import_zod10.z.object({
-    id: import_zod10.z.coerce.string()
+  const registerParamsSchema = import_zod11.z.object({
+    id: import_zod11.z.coerce.string()
   });
   const { id } = registerParamsSchema.parse(request.params);
   const findProductUseCase = makeFindProductUseCase();
@@ -664,21 +726,21 @@ function makeUpdateProductUseCase() {
 }
 
 // src/http/controllers/product/update.ts
-var import_zod11 = require("zod");
+var import_zod12 = require("zod");
 async function update(request, reply) {
-  const registerParamsSchema = import_zod11.z.object({
-    id: import_zod11.z.coerce.string()
+  const registerParamsSchema = import_zod12.z.object({
+    id: import_zod12.z.coerce.string()
   });
   const { id } = registerParamsSchema.parse(request.params);
-  const registerBodySchema = import_zod11.z.object({
-    name: import_zod11.z.string(),
-    description: import_zod11.z.string(),
-    image: import_zod11.z.string(),
-    price: import_zod11.z.coerce.number(),
-    categories: import_zod11.z.array(
-      import_zod11.z.object({
-        id: import_zod11.z.coerce.number(),
-        name: import_zod11.z.string()
+  const registerBodySchema = import_zod12.z.object({
+    name: import_zod12.z.string(),
+    description: import_zod12.z.string(),
+    image: import_zod12.z.string(),
+    price: import_zod12.z.coerce.number(),
+    categories: import_zod12.z.array(
+      import_zod12.z.object({
+        id: import_zod12.z.coerce.number(),
+        name: import_zod12.z.string()
       })
     ).optional()
   });
@@ -713,10 +775,10 @@ function makeDeleteProductUseCase() {
 }
 
 // src/http/controllers/product/delete.ts
-var import_zod12 = require("zod");
+var import_zod13 = require("zod");
 async function deleteProduct(request, reply) {
-  const registerParamsSchema = import_zod12.z.object({
-    id: import_zod12.z.coerce.string()
+  const registerParamsSchema = import_zod13.z.object({
+    id: import_zod13.z.coerce.string()
   });
   const { id } = registerParamsSchema.parse(request.params);
   const deleteProductUseCase = makeDeleteProductUseCase();
@@ -726,11 +788,11 @@ async function deleteProduct(request, reply) {
 
 // src/http/controllers/product/routes.ts
 async function productRoutes(app2) {
-  app2.get("./product", findAllProducts);
-  app2.get("./product/:id", findProduct);
-  app2.post("./product", create4);
-  app2.put("/product:id", update);
-  app2.delete("/product:id", deleteProduct);
+  app2.get("/product", findAllProducts);
+  app2.get("/product/:id", findProduct);
+  app2.post("/product", create4);
+  app2.put("/product/:id", update);
+  app2.delete("/product/:id", deleteProduct);
 }
 
 // src/repositories/typeorm/category.repository.ts
@@ -761,10 +823,10 @@ function makeCreateCategoryUseCase() {
 }
 
 // src/http/controllers/category/create.ts
-var import_zod13 = require("zod");
+var import_zod14 = require("zod");
 async function create5(request, reply) {
-  const registerBodySchema = import_zod13.z.object({
-    name: import_zod13.z.string()
+  const registerBodySchema = import_zod14.z.object({
+    name: import_zod14.z.string()
   });
   const { name } = registerBodySchema.parse(request.body);
   const createCategoryUseCase = makeCreateCategoryUseCase();
@@ -778,7 +840,27 @@ async function categoryRoutes(app2) {
 }
 
 // src/app.ts
+var import_jwt = __toESM(require("@fastify/jwt"));
+
+// src/http/middlewares/jwt-validate.ts
+async function validateJwt(request, reply) {
+  try {
+    const routeFreeList = ["POST-/user", "POST-/user/signin"];
+    const validateRoute = `${request.method}-${request.routeOptions.url}`;
+    if (routeFreeList.includes(validateRoute)) return;
+    await request.jwtVerify();
+  } catch (error) {
+    reply.status(401).send({ message: "Unauthorized" });
+  }
+}
+
+// src/app.ts
 var app = (0, import_fastify.default)();
+app.register(import_jwt.default, {
+  secret: env.JWT_SECRET,
+  sign: { expiresIn: "10m" }
+});
+app.addHook("onRequest", validateJwt);
 app.register(personRoutes);
 app.register(userRoutes);
 app.register(addressRoutes);

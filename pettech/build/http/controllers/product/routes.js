@@ -88,7 +88,7 @@ __decorateClass([
     name: "image_url",
     type: "varchar"
   })
-], Product.prototype, "image_url", 2);
+], Product.prototype, "image", 2);
 __decorateClass([
   (0, import_typeorm2.Column)({
     name: "price",
@@ -130,7 +130,8 @@ var envSchema = import_zod.z.object({
   DATABASE_HOST: import_zod.z.string(),
   DATABASE_NAME: import_zod.z.string(),
   DATABASE_PASSWORD: import_zod.z.string(),
-  DATABASE_PORT: import_zod.z.coerce.number()
+  DATABASE_PORT: import_zod.z.coerce.number(),
+  JWT_SECRET: import_zod.z.string()
 });
 var _env = envSchema.safeParse(process.env);
 if (!_env.success) {
@@ -181,14 +182,14 @@ var ProductRepository = class {
   }
   async findAll(page, limit) {
     return this.repository.find({
-      relations: ["category"],
+      relations: ["categories"],
       skip: (page - 1) * limit,
       take: limit
     });
   }
   async findById(id) {
     return this.repository.findOne({
-      relations: ["category"],
+      relations: ["categories"],
       where: { id }
     });
   }
@@ -226,21 +227,21 @@ async function create(request, reply) {
   const registerBodySchema = import_zod2.z.object({
     name: import_zod2.z.string(),
     description: import_zod2.z.string(),
-    image_url: import_zod2.z.string(),
+    image: import_zod2.z.string(),
     price: import_zod2.z.coerce.number(),
     categories: import_zod2.z.array(
       import_zod2.z.object({
-        id: import_zod2.z.coerce.number(),
+        id: import_zod2.z.coerce.number().optional(),
         name: import_zod2.z.string()
       })
     ).optional()
   });
-  const { name, description, image_url, price, categories } = registerBodySchema.parse(request.body);
+  const { name, description, image, price, categories } = registerBodySchema.parse(request.body);
   const createProductUseCase = makeCreateProductUseCase();
   const product = await createProductUseCase.handler({
     name,
     description,
-    image_url,
+    image,
     price,
     categories
   });
@@ -266,14 +267,14 @@ function makeFindAllProductUseCase() {
 
 // src/http/controllers/product/find-all-products.ts
 var import_zod3 = require("zod");
-function findAllProducts(request, reply) {
+async function findAllProducts(request, reply) {
   const registerQuerySchema = import_zod3.z.object({
     page: import_zod3.z.coerce.number().default(1),
     limit: import_zod3.z.coerce.number().default(10)
   });
   const { page, limit } = registerQuerySchema.parse(request.query);
   const findAllProductUseCase = makeFindAllProductUseCase();
-  const products = findAllProductUseCase.handler(page, limit);
+  const products = await findAllProductUseCase.handler(page, limit);
   return reply.status(200).send(products);
 }
 
@@ -395,11 +396,11 @@ async function deleteProduct(request, reply) {
 
 // src/http/controllers/product/routes.ts
 async function productRoutes(app) {
-  app.get("./product", findAllProducts);
-  app.get("./product/:id", findProduct);
-  app.post("./product", create);
-  app.put("/product:id", update);
-  app.delete("/product:id", deleteProduct);
+  app.get("/product", findAllProducts);
+  app.get("/product/:id", findProduct);
+  app.post("/product", create);
+  app.put("/product/:id", update);
+  app.delete("/product/:id", deleteProduct);
 }
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {

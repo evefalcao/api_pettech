@@ -37,7 +37,8 @@ var envSchema = import_zod.z.object({
   DATABASE_HOST: import_zod.z.string(),
   DATABASE_NAME: import_zod.z.string(),
   DATABASE_PASSWORD: import_zod.z.string(),
-  DATABASE_PORT: import_zod.z.coerce.number()
+  DATABASE_PORT: import_zod.z.coerce.number(),
+  JWT_SECRET: import_zod.z.string()
 });
 var _env = envSchema.safeParse(process.env);
 if (!_env.success) {
@@ -75,6 +76,13 @@ var database = new Database();
 
 // src/repositories/pg/user.reposititory.ts
 var UserRepository = class {
+  async findByUsername(username) {
+    const result = await database.clientInstance?.query(
+      `SELECT * FROM "user" WHERE "user".username = $1`,
+      [username]
+    );
+    return result?.rows[0];
+  }
   async create({
     username,
     password

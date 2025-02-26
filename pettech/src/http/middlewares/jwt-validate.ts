@@ -5,10 +5,10 @@ export async function validateJwt(
   reply: FastifyReply,
 ) {
   try {
-    const route = request.url
-    const method = request.method
+    const routeFreeList = ['POST-/user', 'POST-/user/signin']
+    const validateRoute = `${request.method}-${request.routeOptions.url}`
 
-    if (route === '/user' && method === 'POST') return
+    if (routeFreeList.includes(validateRoute)) return
 
     await request.jwtVerify()
   } catch (error) {

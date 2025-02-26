@@ -37,7 +37,8 @@ var envSchema = import_zod.z.object({
   DATABASE_HOST: import_zod.z.string(),
   DATABASE_NAME: import_zod.z.string(),
   DATABASE_PASSWORD: import_zod.z.string(),
-  DATABASE_PORT: import_zod.z.coerce.number()
+  DATABASE_PORT: import_zod.z.coerce.number(),
+  JWT_SECRET: import_zod.z.string()
 });
 var _env = envSchema.safeParse(process.env);
 if (!_env.success) {
@@ -75,6 +76,13 @@ var database = new Database();
 
 // src/repositories/pg/user.reposititory.ts
 var UserRepository = class {
+  async findByUsername(username) {
+    const result = await database.clientInstance?.query(
+      `SELECT * FROM "user" WHERE "user".username = $1`,
+      [username]
+    );
+    return result?.rows[0];
+  }
   async create({
     username,
     password
@@ -114,6 +122,7 @@ function makeCreateUserUseCase() {
 }
 
 // src/http/controllers/user/create.ts
+var import_bcryptjs = require("bcryptjs");
 var import_zod2 = require("zod");
 async function create(request, reply) {
   const registerBodySchema = import_zod2.z.object({
@@ -121,9 +130,11 @@ async function create(request, reply) {
     password: import_zod2.z.string()
   });
   const { username, password } = registerBodySchema.parse(request.body);
+  const hashedPassword = await (0, import_bcryptjs.hash)(password, 8);
+  const userWithHashedPassword = { username, password: hashedPassword };
   const createUserUseCase = makeCreateUserUseCase();
-  const user = await createUserUseCase.handler({ username, password });
-  return reply.status(201).send(user);
+  const user = await createUserUseCase.handler(userWithHashedPassword);
+  return reply.status(201).send({ id: user?.id, username: user?.username });
 }
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {

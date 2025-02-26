@@ -88,7 +88,7 @@ __decorateClass([
     name: "image_url",
     type: "varchar"
   })
-], Product.prototype, "image_url", 2);
+], Product.prototype, "image", 2);
 __decorateClass([
   (0, import_typeorm2.Column)({
     name: "price",
@@ -130,7 +130,8 @@ var envSchema = import_zod.z.object({
   DATABASE_HOST: import_zod.z.string(),
   DATABASE_NAME: import_zod.z.string(),
   DATABASE_PASSWORD: import_zod.z.string(),
-  DATABASE_PORT: import_zod.z.coerce.number()
+  DATABASE_PORT: import_zod.z.coerce.number(),
+  JWT_SECRET: import_zod.z.string()
 });
 var _env = envSchema.safeParse(process.env);
 if (!_env.success) {
@@ -181,14 +182,14 @@ var ProductRepository = class {
   }
   async findAll(page, limit) {
     return this.repository.find({
-      relations: ["category"],
+      relations: ["categories"],
       skip: (page - 1) * limit,
       take: limit
     });
   }
   async findById(id) {
     return this.repository.findOne({
-      relations: ["category"],
+      relations: ["categories"],
       where: { id }
     });
   }

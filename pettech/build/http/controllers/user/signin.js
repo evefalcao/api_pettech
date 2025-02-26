@@ -17,12 +17,19 @@ var __copyProps = (to, from, except, desc) => {
 };
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
-// src/use-cases/factory/make-create-address-use-case.ts
-var make_create_address_use_case_exports = {};
-__export(make_create_address_use_case_exports, {
-  makeCreateAddressUseCase: () => makeCreateAddressUseCase
+// src/http/controllers/user/signin.ts
+var signin_exports = {};
+__export(signin_exports, {
+  signin: () => signin
 });
-module.exports = __toCommonJS(make_create_address_use_case_exports);
+module.exports = __toCommonJS(signin_exports);
+
+// src/use-cases/errors/invalid-credentials-error.ts
+var InvalidCredentailsError = class extends Error {
+  constructor() {
+    super("Username or password is incorrect");
+  }
+};
 
 // src/lib/pg/db.ts
 var import_pg = require("pg");
@@ -74,59 +81,76 @@ var Database = class {
 };
 var database = new Database();
 
-// src/repositories/pg/address.repository.ts
-var AddressRepository = class {
-  async findAddressByPersonId(personId, page, limit) {
-    const offset = (page - 1) * limit;
-    const query = `
-      SELECT address.*, person.*
-      FROM address
-      JOIN person ON address.person_id = person.id
-      WHERE person.id = $1
-      LIMIT $2
-      OFFSET $3
-    `;
+// src/repositories/pg/user.reposititory.ts
+var UserRepository = class {
+  async findByUsername(username) {
     const result = await database.clientInstance?.query(
-      query,
-      [personId, limit, offset]
+      `SELECT * FROM "user" WHERE "user".username = $1`,
+      [username]
     );
-    return result?.rows || [];
+    return result?.rows[0];
   }
   async create({
-    street,
-    city,
-    state,
-    zip_code,
-    person_id
+    username,
+    password
   }) {
     const result = await database.clientInstance?.query(
-      `
-      INSERT INTO "address" (street, city, state, zip_code, person_id)
-      VALUES ($1, $2, $3, $4, $5)
-      RETURNING *`,
-      [street, city, state, zip_code, person_id]
+      `INSERT INTO "user" (username, password) VALUES ($1, $2) RETURNING *`,
+      [username, password]
+    );
+    return result?.rows[0];
+  }
+  async findWithPerson(userId) {
+    const result = await database.clientInstance?.query(
+      `SELECT * FROM "user" 
+      LEFT JOIN person ON "user".id = person.user_id
+      WHERE "user".id = $1`,
+      [userId]
     );
     return result?.rows[0];
   }
 };
 
-// src/use-cases/create-address.ts
-var CreateAddressUseCase = class {
-  constructor(addressRepository) {
-    this.addressRepository = addressRepository;
+// src/use-cases/signin.ts
+var SigninUseCase = class {
+  constructor(userRepository) {
+    this.userRepository = userRepository;
   }
-  async handler(address) {
-    return this.addressRepository.create(address);
+  async handler(username) {
+    const user = await this.userRepository.findByUsername(username);
+    if (!user) {
+      throw new InvalidCredentailsError();
+    }
+    return user;
   }
 };
 
-// src/use-cases/factory/make-create-address-use-case.ts
-function makeCreateAddressUseCase() {
-  const addressRepository = new AddressRepository();
-  const createAddressUseCase = new CreateAddressUseCase(addressRepository);
-  return createAddressUseCase;
+// src/use-cases/factory/make-signin-use-case.ts
+function makeSigninUseCase() {
+  const userRepository = new UserRepository();
+  const signinUseCase = new SigninUseCase(userRepository);
+  return signinUseCase;
+}
+
+// src/http/controllers/user/signin.ts
+var import_bcryptjs = require("bcryptjs");
+var import_zod2 = require("zod");
+async function signin(request, reply) {
+  const registerBodySchema = import_zod2.z.object({
+    username: import_zod2.z.string(),
+    password: import_zod2.z.string()
+  });
+  const { username, password } = registerBodySchema.parse(request.body);
+  const signinUseCase = makeSigninUseCase();
+  const user = await signinUseCase.handler(username);
+  const doesntPasswordMatch = await (0, import_bcryptjs.compare)(password, user.password);
+  if (!doesntPasswordMatch) {
+    throw new InvalidCredentailsError();
+  }
+  const token = await reply.jwtSign({ username });
+  return reply.status(200).send({ token });
 }
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
-  makeCreateAddressUseCase
+  signin
 });

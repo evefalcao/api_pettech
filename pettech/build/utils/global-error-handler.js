@@ -35,6 +35,9 @@ var errorHandlerMap = {
   },
   ResourceNotFoundError: (error, _, reply) => {
     return reply.status(404).send({ message: error.message });
+  },
+  InvalidCredentialsError: (error, _, reply) => {
+    return reply.status(404).send({ message: error.message });
   }
 };
 var globalErrorHandler = (error, _, reply) => {

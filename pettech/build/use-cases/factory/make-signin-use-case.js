@@ -17,12 +17,12 @@ var __copyProps = (to, from, except, desc) => {
 };
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
-// src/use-cases/factory/make-create-address-use-case.ts
-var make_create_address_use_case_exports = {};
-__export(make_create_address_use_case_exports, {
-  makeCreateAddressUseCase: () => makeCreateAddressUseCase
+// src/use-cases/factory/make-signin-use-case.ts
+var make_signin_use_case_exports = {};
+__export(make_signin_use_case_exports, {
+  makeSigninUseCase: () => makeSigninUseCase
 });
-module.exports = __toCommonJS(make_create_address_use_case_exports);
+module.exports = __toCommonJS(make_signin_use_case_exports);
 
 // src/lib/pg/db.ts
 var import_pg = require("pg");
@@ -74,59 +74,64 @@ var Database = class {
 };
 var database = new Database();
 
-// src/repositories/pg/address.repository.ts
-var AddressRepository = class {
-  async findAddressByPersonId(personId, page, limit) {
-    const offset = (page - 1) * limit;
-    const query = `
-      SELECT address.*, person.*
-      FROM address
-      JOIN person ON address.person_id = person.id
-      WHERE person.id = $1
-      LIMIT $2
-      OFFSET $3
-    `;
+// src/repositories/pg/user.reposititory.ts
+var UserRepository = class {
+  async findByUsername(username) {
     const result = await database.clientInstance?.query(
-      query,
-      [personId, limit, offset]
+      `SELECT * FROM "user" WHERE "user".username = $1`,
+      [username]
     );
-    return result?.rows || [];
+    return result?.rows[0];
   }
   async create({
-    street,
-    city,
-    state,
-    zip_code,
-    person_id
+    username,
+    password
   }) {
     const result = await database.clientInstance?.query(
-      `
-      INSERT INTO "address" (street, city, state, zip_code, person_id)
-      VALUES ($1, $2, $3, $4, $5)
-      RETURNING *`,
-      [street, city, state, zip_code, person_id]
+      `INSERT INTO "user" (username, password) VALUES ($1, $2) RETURNING *`,
+      [username, password]
+    );
+    return result?.rows[0];
+  }
+  async findWithPerson(userId) {
+    const result = await database.clientInstance?.query(
+      `SELECT * FROM "user" 
+      LEFT JOIN person ON "user".id = person.user_id
+      WHERE "user".id = $1`,
+      [userId]
     );
     return result?.rows[0];
   }
 };
 
-// src/use-cases/create-address.ts
-var CreateAddressUseCase = class {
-  constructor(addressRepository) {
-    this.addressRepository = addressRepository;
-  }
-  async handler(address) {
-    return this.addressRepository.create(address);
+// src/use-cases/errors/invalid-credentials-error.ts
+var InvalidCredentailsError = class extends Error {
+  constructor() {
+    super("Username or password is incorrect");
   }
 };
 
-// src/use-cases/factory/make-create-address-use-case.ts
-function makeCreateAddressUseCase() {
-  const addressRepository = new AddressRepository();
-  const createAddressUseCase = new CreateAddressUseCase(addressRepository);
-  return createAddressUseCase;
+// src/use-cases/signin.ts
+var SigninUseCase = class {
+  constructor(userRepository) {
+    this.userRepository = userRepository;
+  }
+  async handler(username) {
+    const user = await this.userRepository.findByUsername(username);
+    if (!user) {
+      throw new InvalidCredentailsError();
+    }
+    return user;
+  }
+};
+
+// src/use-cases/factory/make-signin-use-case.ts
+function makeSigninUseCase() {
+  const userRepository = new UserRepository();
+  const signinUseCase = new SigninUseCase(userRepository);
+  return signinUseCase;
 }
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
-  makeCreateAddressUseCase
+  makeSigninUseCase
 });

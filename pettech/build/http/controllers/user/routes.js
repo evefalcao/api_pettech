@@ -37,7 +37,8 @@ var envSchema = import_zod.z.object({
   DATABASE_HOST: import_zod.z.string(),
   DATABASE_NAME: import_zod.z.string(),
   DATABASE_PASSWORD: import_zod.z.string(),
-  DATABASE_PORT: import_zod.z.coerce.number()
+  DATABASE_PORT: import_zod.z.coerce.number(),
+  JWT_SECRET: import_zod.z.string()
 });
 var _env = envSchema.safeParse(process.env);
 if (!_env.success) {
@@ -75,6 +76,13 @@ var database = new Database();
 
 // src/repositories/pg/user.reposititory.ts
 var UserRepository = class {
+  async findByUsername(username) {
+    const result = await database.clientInstance?.query(
+      `SELECT * FROM "user" WHERE "user".username = $1`,
+      [username]
+    );
+    return result?.rows[0];
+  }
   async create({
     username,
     password
@@ -114,6 +122,7 @@ function makeCreateUserUseCase() {
 }
 
 // src/http/controllers/user/create.ts
+var import_bcryptjs = require("bcryptjs");
 var import_zod2 = require("zod");
 async function create(request, reply) {
   const registerBodySchema = import_zod2.z.object({
@@ -121,9 +130,11 @@ async function create(request, reply) {
     password: import_zod2.z.string()
   });
   const { username, password } = registerBodySchema.parse(request.body);
+  const hashedPassword = await (0, import_bcryptjs.hash)(password, 8);
+  const userWithHashedPassword = { username, password: hashedPassword };
   const createUserUseCase = makeCreateUserUseCase();
-  const user = await createUserUseCase.handler({ username, password });
-  return reply.status(201).send(user);
+  const user = await createUserUseCase.handler(userWithHashedPassword);
+  return reply.status(201).send({ id: user?.id, username: user?.username });
 }
 
 // src/use-cases/errors/resource-not-found-error.ts
@@ -164,10 +175,58 @@ async function findUser(request, reply) {
   return reply.status(200).send(user);
 }
 
+// src/use-cases/errors/invalid-credentials-error.ts
+var InvalidCredentailsError = class extends Error {
+  constructor() {
+    super("Username or password is incorrect");
+  }
+};
+
+// src/use-cases/signin.ts
+var SigninUseCase = class {
+  constructor(userRepository) {
+    this.userRepository = userRepository;
+  }
+  async handler(username) {
+    const user = await this.userRepository.findByUsername(username);
+    if (!user) {
+      throw new InvalidCredentailsError();
+    }
+    return user;
+  }
+};
+
+// src/use-cases/factory/make-signin-use-case.ts
+function makeSigninUseCase() {
+  const userRepository = new UserRepository();
+  const signinUseCase = new SigninUseCase(userRepository);
+  return signinUseCase;
+}
+
+// src/http/controllers/user/signin.ts
+var import_bcryptjs2 = require("bcryptjs");
+var import_zod4 = require("zod");
+async function signin(request, reply) {
+  const registerBodySchema = import_zod4.z.object({
+    username: import_zod4.z.string(),
+    password: import_zod4.z.string()
+  });
+  const { username, password } = registerBodySchema.parse(request.body);
+  const signinUseCase = makeSigninUseCase();
+  const user = await signinUseCase.handler(username);
+  const doesntPasswordMatch = await (0, import_bcryptjs2.compare)(password, user.password);
+  if (!doesntPasswordMatch) {
+    throw new InvalidCredentailsError();
+  }
+  const token = await reply.jwtSign({ username });
+  return reply.status(200).send({ token });
+}
+
 // src/http/controllers/user/routes.ts
 async function userRoutes(app) {
   app.get("/user/:id", findUser);
   app.post("/user", create);
+  app.post("/user/signin", signin);
 }
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {

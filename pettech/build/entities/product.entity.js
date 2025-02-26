@@ -86,7 +86,7 @@ __decorateClass([
     name: "image_url",
     type: "varchar"
   })
-], Product.prototype, "image_url", 2);
+], Product.prototype, "image", 2);
 __decorateClass([
   (0, import_typeorm2.Column)({
     name: "price",

@@ -17,31 +17,34 @@ var __copyProps = (to, from, except, desc) => {
 };
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
-// src/env/index.ts
-var env_exports = {};
-__export(env_exports, {
-  env: () => env
+// src/use-cases/signin.ts
+var signin_exports = {};
+__export(signin_exports, {
+  SigninUseCase: () => SigninUseCase
 });
-module.exports = __toCommonJS(env_exports);
-var import_config = require("dotenv/config");
-var import_zod = require("zod");
-var envSchema = import_zod.z.object({
-  NODE_ENV: import_zod.z.enum(["development", "test", "production"]).default("development"),
-  PORT: import_zod.z.coerce.number().default(3030),
-  DATABASE_USER: import_zod.z.string(),
-  DATABASE_HOST: import_zod.z.string(),
-  DATABASE_NAME: import_zod.z.string(),
-  DATABASE_PASSWORD: import_zod.z.string(),
-  DATABASE_PORT: import_zod.z.coerce.number(),
-  JWT_SECRET: import_zod.z.string()
-});
-var _env = envSchema.safeParse(process.env);
-if (!_env.success) {
-  console.error("Invalid environment variables", _env.error.format());
-  throw new Error("Invalid environment variables");
-}
-var env = _env.data;
+module.exports = __toCommonJS(signin_exports);
+
+// src/use-cases/errors/invalid-credentials-error.ts
+var InvalidCredentailsError = class extends Error {
+  constructor() {
+    super("Username or password is incorrect");
+  }
+};
+
+// src/use-cases/signin.ts
+var SigninUseCase = class {
+  constructor(userRepository) {
+    this.userRepository = userRepository;
+  }
+  async handler(username) {
+    const user = await this.userRepository.findByUsername(username);
+    if (!user) {
+      throw new InvalidCredentailsError();
+    }
+    return user;
+  }
+};
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
-  env
+  SigninUseCase
 });

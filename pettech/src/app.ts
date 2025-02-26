@@ -9,7 +9,7 @@ import { productRoutes } from './http/controllers/product/routes'
 import { categoryRoutes } from './http/controllers/category/routes'
 import fastifyJwt from '@fastify/jwt'
 import { env } from './env'
-import { validateJwt } from './http/controllers/middlewares/jwt-validate'
+import { validateJwt } from './http/middlewares/jwt-validate'
 
 export const app = fastify()
 

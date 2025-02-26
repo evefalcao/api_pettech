@@ -17,31 +17,23 @@ var __copyProps = (to, from, except, desc) => {
 };
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
-// src/env/index.ts
-var env_exports = {};
-__export(env_exports, {
-  env: () => env
+// src/http/middlewares/jwt-validate.ts
+var jwt_validate_exports = {};
+__export(jwt_validate_exports, {
+  validateJwt: () => validateJwt
 });
-module.exports = __toCommonJS(env_exports);
-var import_config = require("dotenv/config");
-var import_zod = require("zod");
-var envSchema = import_zod.z.object({
-  NODE_ENV: import_zod.z.enum(["development", "test", "production"]).default("development"),
-  PORT: import_zod.z.coerce.number().default(3030),
-  DATABASE_USER: import_zod.z.string(),
-  DATABASE_HOST: import_zod.z.string(),
-  DATABASE_NAME: import_zod.z.string(),
-  DATABASE_PASSWORD: import_zod.z.string(),
-  DATABASE_PORT: import_zod.z.coerce.number(),
-  JWT_SECRET: import_zod.z.string()
-});
-var _env = envSchema.safeParse(process.env);
-if (!_env.success) {
-  console.error("Invalid environment variables", _env.error.format());
-  throw new Error("Invalid environment variables");
+module.exports = __toCommonJS(jwt_validate_exports);
+async function validateJwt(request, reply) {
+  try {
+    const routeFreeList = ["POST-/user", "POST-/user/signin"];
+    const validateRoute = `${request.method}-${request.routeOptions.url}`;
+    if (routeFreeList.includes(validateRoute)) return;
+    await request.jwtVerify();
+  } catch (error) {
+    reply.status(401).send({ message: "Unauthorized" });
+  }
 }
-var env = _env.data;
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
-  env
+  validateJwt
 });
