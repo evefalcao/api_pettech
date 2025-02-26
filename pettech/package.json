@@ -20,6 +20,7 @@
   },
   "homepage": "https://github.com/evefalcao/fiap_api#readme",
   "devDependencies": {
+    "@types/bcryptjs": "2.4.6",
     "@types/node": "22.13.5",
     "@types/pg": "8.11.11",
     "@typescript-eslint/eslint-plugin": "6.21.0",
@@ -37,6 +38,8 @@
     "typescript": "5.7.3"
   },
   "dependencies": {
+    "@fastify/jwt": "9.0.4",
+    "bcryptjs": "3.0.2",
     "dotenv": "16.4.7",
     "fastify": "5.2.1",
     "pg": "8.13.3",
