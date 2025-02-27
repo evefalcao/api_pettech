@@ -6,21 +6,14 @@ export type ProductDocument = HydratedDocument<Product>
 
 @Schema()
 export class Product implements IProduct{
-
   @Prop({ type: mongoose.Schema.Types.ObjectId})
   id?: number | undefined;
   @Prop()
   name: string;
-
-
-
-
-  
   @Prop()
   quantity: number;
   @Prop()
-  relationalId: number;
-
+  relationId: string;
 }
 
 export const ProductSchema = SchemaFactory.createForClass(Product);
