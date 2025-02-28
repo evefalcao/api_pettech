@@ -1,7 +1,9 @@
-import { Body, Controller, Delete, Get, Param, Post, Put, Query, UsePipes } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Post, Put, Query, UseGuards, UseInterceptors, UsePipes } from "@nestjs/common";
 import { StockService } from "../services/stock.service";
 import { z } from "zod";
 import { ZodValidationPipe } from "src/shared/pipe/zod-validation.pipe";
+import { AuthGuard } from "src/shared/guards/auth.guard";
+import { LogginInterceptor } from "src/shared/interceptors/loggin.interceptor";
 
 const createStockSchema = z.object({
   name: z.string(),
@@ -16,10 +18,12 @@ const updateStockSchema = z.object({
 type CreateStock = z.infer<typeof createStockSchema>
 type UpdateStock = z.infer<typeof updateStockSchema>
 
+@UseInterceptors(LogginInterceptor)
 @Controller('stock')
 export class StockController {
   constructor(private readonly stockService: StockService){}
 
+  @UseGuards(AuthGuard)
   @Get()
   async getAllStock(@Query('limit') limit: number, @Query('page') page: number) {
     return this.stockService.getAllStock(limit, page)
