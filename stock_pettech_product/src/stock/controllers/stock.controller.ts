@@ -23,7 +23,6 @@ type UpdateStock = z.infer<typeof updateStockSchema>
 export class StockController {
   constructor(private readonly stockService: StockService){}
 
-  @UseGuards(AuthGuard)
   @Get()
   async getAllStock(@Query('limit') limit: number, @Query('page') page: number) {
     return this.stockService.getAllStock(limit, page)
@@ -34,6 +33,7 @@ export class StockController {
     return this.stockService.getStockById(productId)
   }
 
+  @UseGuards(AuthGuard)
   @UsePipes(new ZodValidationPipe(createStockSchema))
   @Post()
   async createStock(@Body() { name, quantity, relationId }: CreateStock) {
