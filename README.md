@@ -55,17 +55,17 @@ Após a criação do projeto, remova o arquivo de teste `app.controller.spec.ts`
 Adicione as seguintes regras ao arquivo de configuração do ESLint para padronizar o estilo de código:
 
 ```json
-...
+// ...
 "prettier/prettier": [
   "error",
   {
-    'endOfLine': 'auto',
+    "endOfLine": "auto",
     "singleQuote": true,
     "semi": true,
     "trailingComma": "all",
   }
 ]
-...
+// ...
 ```
 
 Esta configuração estabelece um estilo consistente para o código: aspas simples, ponto-e-vírgula obrigatório e vírgula final em estruturas de código.
