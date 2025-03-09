@@ -8,7 +8,7 @@ import { ConfigModule } from '@nestjs/config';
 
 @Module({
   imports: [
-    MongooseModule.forRoot(process.env.MONGO_URI || 'mongodb://localhost:27017/default'),
+    MongooseModule.forRoot(process.env.MONGO_URI || 'mongodb://mongo:27017/default'),
     StockModule, 
     JwtModule.register({
       global: true,
