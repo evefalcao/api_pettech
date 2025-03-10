@@ -10,16 +10,16 @@ import { PrometheusModule } from '@willsoto/nestjs-prometheus';
 @Module({
   imports: [
     PrometheusModule.register(),
-    MongooseModule.forRoot(process.env.MONGO_URI || 'mongodb://mongo:27017/default'),
+    ConfigModule.forRoot({
+      isGlobal: true,
+    }),
+    MongooseModule.forRoot(process.env.MONGO_URI as string),
     StockModule, 
     JwtModule.register({
       global: true,
-      secret: process.env.JWT_SECRET || 'defaultSecret',
+      secret: process.env.JWT_SECRET,
       signOptions: { expiresIn: '10m' }
     }),
-    ConfigModule.forRoot({
-      isGlobal: true,
-    })
   ],
   controllers: [AppController],
   providers: [AppService],
