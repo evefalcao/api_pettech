@@ -5,6 +5,7 @@ import { ProductMongooseRepository } from './repositories/mongoose/product.mongo
 import { ProductRepository } from './repositories/product.repository';
 import { StockService } from './services/stock.service';
 import { StockController } from './controllers/stock.controller';
+import { PrometheusService } from 'src/shared/services/prometheus.service';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { StockController } from './controllers/stock.controller';
       useClass: ProductMongooseRepository
     },
     StockService,
+    PrometheusService
   ],
   controllers: [
     StockController
