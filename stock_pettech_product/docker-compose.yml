@@ -3,31 +3,31 @@ services:
     build:
       context: .
     ports:
-      - "3010:3010"
+       - "3010:3010"
     depends_on:
       - mongo
     networks:
       - mynetwork
   mongo:
-    image: mongo:latest
-    ports:
-      - "27017:27017"
-    volumes:
-      - mongo_data:/data/db
-    networks:
-      - mynetwork
-
-  prometheus:
+      image: mongo:latest
+      ports:
+        - "27017:27017"
+      volumes:
+        - mongo_data:/data/db
+      networks:
+        - mynetwork
+        
+  prometheus: 
     image: prom/prometheus
     ports:
       - "9090:9090"
-    command:
+    command: 
       - --config.file=/etc/prometheus/prometheus.yml
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
     networks:
       - mynetwork
-
+    
   grafana:
     image: grafana/grafana
     ports:
@@ -42,4 +42,5 @@ networks:
     driver: bridge
 
 volumes:
-  mongo_data:
+  mongo_data:    
+      

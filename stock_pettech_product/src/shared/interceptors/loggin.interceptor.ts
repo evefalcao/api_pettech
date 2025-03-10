@@ -15,7 +15,9 @@ export class LogginInterceptor implements NestInterceptor {
         console.log(`Request time: ${Date.now() - now}ms`);
 
         const duration = Date.now() - now;
-        this.prometheusService.sendMetrics.labels(request.route.path).observe(duration / 1000);
+        this.prometheusService.sendMetrics
+          .labels(request.route.path)
+          .observe(duration / 1000);
       }),
     )
   }
